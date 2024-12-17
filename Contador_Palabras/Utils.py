@@ -6,8 +6,19 @@ from nltk.tokenize import word_tokenize
 import Levenshtein
 import os
 import cv2
+from fpdf import FPDF
 
 
+def Quitar_Tildes(texto):
+      # Función que elimina tildes, dieresis, virgullillas y demás artefactos encontrados en vocales.
+  # No tenemos en cuenta lás mayusculas, porque el textp siempre se pasa todo a minúsculas.
+
+    texto = texto.replace('á','a').replace('é','e').replace('í','i').replace('ó','o').replace('ú','u')
+    texto = texto.replace('à','a').replace('è','e').replace('ì','i').replace('ò','o').replace('ù','u')
+    texto = texto.replace('â','a').replace('ê','e').replace('î','i').replace('ô','o').replace('û','u')
+    texto = texto.replace('ã','a').replace('õ','o').replace('ã','a').replace('õ','o')
+    texto = texto.replace('ä','a').replace('ë','e').replace('ï','i').replace('ö','o').replace('ü','u')
+    return texto
 
 
 def read_words(path):
@@ -16,10 +27,12 @@ def read_words(path):
     """
     if path.endswith('.csv'):
         df = pd.read_csv(path,sep=',')
+        df = df.dropna()
         words = df.values.tolist()
         words = [word[0] for word in words]
     elif path.endswith('.xlsx'):
         df = pd.read_excel(path, sheet_name = 0)
+        df = df.dropna()
         words = df['Unnamed: 0'].tolist()
         #print(df)
     elif path.endswith('.txt'):
@@ -40,30 +53,13 @@ def read_words(path):
         #raise ValueError("El archivo debe ser un csv, un excel o un txt.")
 
     for i in range(len(words)):
-        words[i] = words[i].lower().replace(',','').replace('.','').replace(' ','')
+        words[i] = words[i].lower().replace(',','').replace('.','').replace(' ','').replace('\n','')
+        words[i] = Quitar_Tildes(words[i])
 
     count = np.zeros(len(words))
 
     df_words = pd.DataFrame({'words':words, 'count':count})
     return df_words
-
-
-def extract_images_from_pdf(pdf_path, start_page, end_page, poppler_path = None):
-    """
-    Extract images from a PDF file.
-
-    Parameters:
-    - pdf_path (str): Path to the PDF file.
-    - start_page (int): Starting page number.
-    - end_page (int): Ending page number.
-
-    Returns:
-    - images (list): List of images.
-    """
-    images = convert_from_path(pdf_path, dpi = 500, first_page = start_page, last_page = end_page,poppler_path = poppler_path) # poppler path is the path to the poppler bin folder
-    return images
-
-
 
 def preprocess_images(list_of_images):
     """
@@ -86,7 +82,7 @@ def preprocess_images(list_of_images):
 
 
 def find_substring_with_distance(input_string, target_word, max_distance):
-    # This function finds the substring of input_string that has the minimum distance to target_word
+    # Esta función busca substrings dentro de una palabra que sea coincidencia
     min_distance = float('inf')
     found_substring = None
 
@@ -99,7 +95,7 @@ def find_substring_with_distance(input_string, target_word, max_distance):
                 min_distance = current_distance
                 found_substring = substring
 
-    return found_substring
+    return found_substring, min_distance
 
 
 def perform_ocr(image_path,language = 'spa_old'):
@@ -107,55 +103,72 @@ def perform_ocr(image_path,language = 'spa_old'):
     return text
 
 
+
+# Función que guarda el texto extraido en un nuevo PDF
+def save_text_as_pdf(book, output_filename="output.pdf"):
+    pdf = FPDF()
+    
+    # Iterate through all pages (each book entry)
+    for idx, page_text in book:
+        page_text = page_text.replace('\n',' ')      
+        pdf.add_page()  # Add a new page for each book entry
+        pdf.set_font("Arial", size=10)  # Set font type and size
+  
+        
+        # Write all the text for this page into the current PDF page
+        pdf.multi_cell(190, 10, txt=page_text, border=0)
+    
+    # Save the PDF
+    pdf.output(output_filename)
+    print(f"PDF saved as: {output_filename}")
+
 def levenshtein_distance(word1, word2):
     return Levenshtein.distance(word1, word2)
 
-def count_words_with_levenshtein(words, target_word, max_distance=2,return_coincidences=False):
+def count_words_with_levenshtein(words, target_word, max_distance=2,find_in_substrings=True):
+  # a esta función le llega la lista de palabras, la palabra en cuestión que buscamos y la distancia máxima que queremos considerar coincidencia.
+  # Además, le llega un argumento que nos dice si queremos encontrar substrings o palabras completas, es decir, si queremos considerar para la búsqueda fragmentos de palabras.
+  # Esto es muy útil si buscamos verbos o adjetivos que pueden estar convertidos en adverbios de modo, o para hacer mas robusto el sistema a no detectar un espacio
+  # Sin embargo, si le estamos haciendo la búsqueda a un PDF ya digitalizado puede dar errores.
 
     count = 0
     coincidences = []
+    # Iteramos por todas las palabras insertadas
+    
     for word in words:
-        word = find_substring_with_distance(word, target_word.lower(), max_distance)
-        if word is not None:
-            count += 1
-            coincidences.append(word)
+      # Si queremos buscar en substrings, aplicamos la funcion
+      if find_in_substrings:
+        word,distance = find_substring_with_distance(word, target_word, max_distance)
 
-    if return_coincidences:
-        return count, coincidences
-    else:
+      else:
+        # Si no, simplemente calculamos la distancia de cada palabra con la que buscamos.
+        distance = levenshtein_distance(word,target_word)
+        
+        # la guardamos si es exacta y estamos buscando coincidencias exactas
+      if distance == 0 and max_distance == 0:
+        word = word
+        # o si no es exacta pero menor que la distancia maxima y estamos buscnado no exactas.
+        # Si guardamos las exactas aqui, algunas palabras las guardariamos dos veces.
+      elif distance <= max_distance and not distance==0:
+        word = word
+      else:
+        word = None
 
-        return count
+      if word is not None:
+          count += 1
+          coincidences.append(word)
 
-def preprocess_text(text):
+    return count, coincidences
+    
+def PostProcess_text(text):
+    # Función que realiza un post-procesado al texto antes de pasar a leerlo
+    # Pasamos el texto a minúsculas
     text = text.lower()
+    # Quitamos signos de puntuación.
     text = text.replace(',',' ').replace('.',' ').replace('-\n','').replace('\n',' ')
+    # Quitamos tildes, diéresis y algunas cosas más
+    text = Quitar_Tildes(text)
+
+    # Tokenizamos el texto
     text = word_tokenize(text)
     return text
-
-
-def preprocess_csv(path_csv):
-    df = pd.read_csv(path_csv, index_col = 0)
-    df = df.dropna()
-    df['coincidences'] = df['coincidences'].str.split(',')
-    df['Page'] = df['Page'].str.split(',')
-    return df
-
-
-from collections import Counter
-
-def combinar_listas(lista_palabras, lista_paginas):
-    # Crear un diccionario para almacenar las páginas asociadas a cada palabra
-    diccionario_paginas = {}
-
-    # Llenar el diccionario con las páginas asociadas a cada palabra
-    for palabra, pagina in zip(lista_palabras, lista_paginas):
-        if palabra in diccionario_paginas:
-            diccionario_paginas[palabra]['paginas'].append(pagina)
-            diccionario_paginas[palabra]['contador'] += 1
-        else:
-            diccionario_paginas[palabra] = {'paginas': [pagina], 'contador': 1}
-
-    # Crear la lista combinada
-    lista_combinada = [f"{palabra} ({', '.join(map(str, info['paginas']))}) [{info['contador']}]" for palabra, info in diccionario_paginas.items()]
-
-    return lista_combinada

@@ -14,3 +14,6 @@ Estos códigos están pensados para ser ejecutados usando Google Colab, una herr
 - Mejorar Contador_Palabras para implementar distintos OCR como pueden ser Easy-OCR, paddleOCR o algún otro. Además, añadir una opción de no pasar el OCR, sino directamente extraer el texto del PDF, funcionalidad muy útil si el texto viene ya digitalizado.
 
   
+## Contacto 
+
+Este repositorio ha sido realizado por José Ignacio Salas Cáceres. Mail de contacto: jose.salas@ulpgc.es

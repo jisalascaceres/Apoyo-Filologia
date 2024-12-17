@@ -12,6 +12,7 @@ from nltk.tokenize import word_tokenize
 import pytesseract
 from pdf2image import convert_from_path
 from pypdf import PdfReader
+from Utils import *
 import nltk
 nltk.download('punkt_tab')
 

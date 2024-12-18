@@ -119,9 +119,13 @@ def save_text_as_pdf(book, output_filename="output.pdf"):
         pdf.multi_cell(190, 10, txt=page_text, border=0)
     
     # Save the PDF
-    pdf.output(output_filename)
-    print(f"PDF saved as: {output_filename}")
-
+    try:
+          pdf.output(output_filename)
+          print(f"PDF saved as: {output_filename}")
+    except:
+          print('Error al generar el PDF')
+          return 1
+          
 def levenshtein_distance(word1, word2):
     return Levenshtein.distance(word1, word2)
 

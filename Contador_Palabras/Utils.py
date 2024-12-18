@@ -123,8 +123,8 @@ def save_text_as_pdf(book, output_filename="output.pdf"):
           pdf.output(output_filename)
           print(f"PDF saved as: {output_filename}")
     except:
-          print('Error al generar el PDF')
-          return 1
+          print('Error al generar el PDF, seguirá el proceso sin guardar el resultado de la digitalización.')
+          
           
 def levenshtein_distance(word1, word2):
     return Levenshtein.distance(word1, word2)

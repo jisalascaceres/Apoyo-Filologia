@@ -104,24 +104,29 @@ def perform_ocr(image_path,language = 'spa_old'):
 
 
 
-# Función que guarda el texto extraido en un nuevo PDF
 def save_text_as_pdf(book, output_filename="output.pdf"):
     pdf = FPDF()
-    
-    # Iterate through all pages (each book entry)
-    for idx, page_text in book:
-        page_text = page_text.replace('\n',' ')      
-        pdf.add_page()  # Add a new page for each book entry
-        pdf.set_font("Arial", size=10)  # Set font type and size
-  
-        
-        # Write all the text for this page into the current PDF page
-        pdf.multi_cell(190, 10, txt=page_text, border=0)
-    
-    # Save the PDF
 
-        pdf.output(output_filename)
-        print(f"PDF saved as: {output_filename}")
+    try:
+      pdf.add_font('Arial', '', '/content/font/arial.ttf', uni=True) # De esta manera es compatible con tildes y demás
+      pdf.set_font('Arial', size=12)
+      # Iterate through all pages (each book entry)
+      
+      for idx, page_text in book:
+          page_text = page_text.replace('\n',' ')      
+          pdf.add_page()  # Add a new page for each book entry
+
+          # Write all the text for this page into the current PDF page
+          pdf.multi_cell(190, 10, txt=page_text, border=0)
+      
+      # Save the PDF
+
+      pdf.output(output_filename)
+      print(f"PDF saved as: {output_filename}")
+    except:
+      print('Error al volcar el texto en un PDF. Seguiremos con el conteo con normalidad.')
+
+          
 
           
           

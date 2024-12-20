@@ -130,6 +130,11 @@ def Perform_word_count(path_pdf, path_csv, start_page = 1, end_page = -1, max_di
 
   # ---------------------- Búsqueda de palabras en el texto extraído --------------------------------------
 
+        # Si no se quiere aplicar Conteo, es decir, que solo se quiere realizar el OCR al PDF. Terminamos aqui
+    if not Aplicar_Conteo:
+      print('Fin de la ejecución, Usted programó que no hubiera conteo de palabras.')
+      return 0
+    
     print('Buscando palabras...')
     # Leemos las palabras del archivo de entrada.
     try:
@@ -141,10 +146,7 @@ def Perform_word_count(path_pdf, path_csv, start_page = 1, end_page = -1, max_di
 
 
 
-    # Si no se quiere aplicar Conteo, es decir, que solo se quiere realizar el OCR al PDF. Terminamos aqui
-    if not Aplicar_Conteo:
-      print('Fin de la ejecución, Usted programó que no hubiera conteo de palabras.')
-      return 0
+
 
     # Vamos a aplicar un post procesado al texto. Quitamos signos de puntuación, tildes, todo minuscula.  
     for i in range(len(book)):
